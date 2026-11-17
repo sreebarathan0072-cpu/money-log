@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#191919">
+<title>Money Log</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  html,body{margin:0;height:100%;background:#191919;color:#ececec;font-family:system-ui,-apple-system,Roboto,sans-serif;overflow:hidden}
+  iframe{position:fixed;inset:0;width:100%;height:100%;border:0;display:none}
+  .box{position:fixed;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:24px;gap:14px;text-align:center}
+  .box img{width:84px;height:84px}
+  h1{font-size:22px;margin:4px 0}
+  p{color:#9b9b9b;font-size:14px;margin:0;max-width:340px;line-height:1.5}
+  input{width:100%;max-width:360px;background:#252525;border:1px solid #343434;color:#ececec;border-radius:12px;padding:14px;font-size:15px;outline:none}
+  input:focus{border-color:#2f8cff}
+  button{width:100%;max-width:360px;border:0;border-radius:12px;padding:16px;font-size:17px;font-weight:600;background:#2ea06a;color:#fff}
+  .err{color:#ff8a80;font-size:14px;min-height:18px}
+  .spin{width:34px;height:34px;border:3px solid #333;border-top-color:#2ea06a;border-radius:50%;animation:r .8s linear infinite}
+  @keyframes r{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="setup" class="box" style="display:none">
+  <img src="icon-192.png" alt="">
+  <h1>Money Log</h1>
+  <p>Paste your Apps Script web app URL (the one ending in <b>/exec</b>). You only do this once.</p>
+  <input id="url" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+  <div id="err" class="err"></div>
+  <button id="go">Save</button>
+</div>
+<div id="loading" class="box" style="display:none">
+  <div class="spin"></div>
+  <p>Opening…</p>
+</div>
+<div id="offline" class="box" style="display:none">
+  <h1>You’re offline</h1>
+  <p>Connect to the internet to log expenses.</p>
+  <button onclick="location.reload()">Retry</button>
+</div>
+<iframe id="app" allow="clipboard-write" title="Money Log"></iframe>
+
+<script>
+var KEY = 'ml_app_url';
+function get() { try { return localStorage.getItem(KEY); } catch (e) { return null; } }
+function set(v) { try { localStorage.setItem(KEY, v); } catch (e) {} }
+function show(id) { ['setup', 'loading', 'offline'].forEach(function (x) { document.getElementById(x).style.display = x === id ? 'flex' : 'none'; }); }
+
+// Open "…/index.html?setup" to change the URL later.
+if (/[?&]setup\b/.test(location.search)) { try { localStorage.removeItem(KEY); } catch (e) {} history.replaceState(null, '', location.pathname); }
+
+function start() {
+  var url = get();
+  if (!url) { show('setup'); document.getElementById('url').focus(); return; }
+  if (!navigator.onLine) { show('offline'); return; }
+  show('loading');
+  var f = document.getElementById('app');
+  f.onload = function () { show(null); f.style.display = 'block'; };
+  f.src = url;
+}
+
+document.getElementById('go').onclick = function () {
+  var v = document.getElementById('url').value.trim();
+  if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec/.test(v)) {
+    document.getElementById('err').textContent = 'That doesn’t look like a web app URL ending in /exec';
+    return;
+  }
+  set(v); start();
+};
+document.getElementById('url').addEventListener('keydown', function (e) { if (e.key === 'Enter') document.getElementById('go').click(); });
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+start();
+</script>
+</body>
+</html>
